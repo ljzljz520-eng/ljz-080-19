@@ -10,6 +10,8 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
+    volumes:
+      - ./apps/server/supabase/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
@@ -18,21 +20,25 @@ services:
 
   # 2. Backend Service (NestJS)
   backend:
-    build: ./apps/server
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
     ports:
       - "8000:3000"
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://postgres:password@db:5432/postgres
-      # Supabase config placeholders
-      SUPABASE_URL: http://placeholder-project.supabase.co
-      SUPABASE_KEY: placeholder-key
+      # 配置真实 Supabase 信息后将使用 Supabase Postgres；
+      # 保持 placeholder 时后端自动使用内存演示数据（含种子老人/活动/报名）
+      SUPABASE_URL: ${SUPABASE_URL:-http://placeholder-project.supabase.co}
+      SUPABASE_KEY: ${SUPABASE_KEY:-placeholder-key}
 
   # 3. Frontend Service (React + Vite + Nginx)
   frontend:
-    build: ./apps/client
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
     ports:
       - "3000:80"
     depends_on:
